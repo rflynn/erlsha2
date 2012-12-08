@@ -37,14 +37,15 @@
 #include <string.h>
 #include "erl_nif.h"
 
-
-#ifndef WORDS_BIGENDIAN
+#if 0
+#ifdef WORDS_BIGENDIAN
+#define BIGENDIAN64(x) (x)
+#else
 #define BYTESWAP32(x)                           \
     ((((uint32_t)(x) & 0x000000FF) << 24) |     \
      (((uint32_t)(x) & 0x0000FF00) << 8)  |     \
      (((uint32_t)(x) >> 8) & 0x0000FF00)  |     \
      (((uint32_t)(x) >> 24) & 0x000000FF))
-
 #define	BYTESWAP64(x)                                          \
     (((uint64_t)(x) << 56) |                                   \
      (((uint64_t)(x) << 40) & 0X00FF000000000000ULL) |         \
@@ -54,6 +55,12 @@
      (((uint64_t)(x) >> 24) & 0X0000000000FF0000ULL) |         \
      (((uint64_t)(x) >> 40) & 0X000000000000FF00ULL) |         \
      ((uint64_t)(x)  >> 56))
+#define BIGENDIAN64(x) BYTESWAP64(x)
+#endif
+#else
+#include "bswap.h"
+#define BYTESWAP32(x) BSWAP32(x)
+#define BYTESWAP64(x) BSWAP64(x)
 #endif
 
 static uint32_t H224[] = {
@@ -306,11 +313,7 @@ pad(unsigned char* bin, uint64_t binsize, Context* ctx)
     p = ctx->bytes + ctx->count;
     *p++ = 0x80;
     memset(p, 0, pad);
-#ifndef WORDS_BIGENDIAN
-    *(uint64_t*)(p + pad) = BYTESWAP64(lenbits);
-#else
-    *(uint64_t*)(p + pad) = lenbits;
-#endif
+    *(uint64_t*)(p + pad) = BIGENDIAN64(lenbits);
     ctx->count += 1 + pad + sizeof lenbits;
 }
 
